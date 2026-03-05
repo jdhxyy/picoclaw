@@ -209,7 +209,7 @@ func (c *PicoChannel) broadcastToSession(chatID string, msg PicoMessage) error {
 		if !ok {
 			return true
 		}
-		if pc.sessionID == sessionID {
+		if key == sessionID {
 			if err := pc.writeJSON(msg); err != nil {
 				logger.DebugCF("pico", "Write to connection failed", map[string]any{
 					"conn_id": pc.id,
@@ -421,6 +421,11 @@ func (c *PicoChannel) handleMessageSend(pc *picoConn, msg PicoMessage) {
 	sessionID := msg.SessionID
 	if sessionID == "" {
 		sessionID = pc.sessionID
+	} else {
+		// Check if sessionID already exists
+		if _, ok := c.connections.Load(sessionID); !ok {
+			c.connections.Store(sessionID, pc)
+		}
 	}
 
 	chatID := "pico:" + sessionID
