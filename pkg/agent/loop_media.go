@@ -53,6 +53,12 @@ func resolveMediaRefs(messages []providers.Message, store media.MediaStore, maxS
 				continue
 			}
 
+			if meta.Filename != "" && result[i].Content != "" {
+				oldPattern := meta.Filename + " [file]"
+				newPattern :=oldPattern + " PATH=" + localPath
+				result[i].Content = strings.ReplaceAll(result[i].Content, oldPattern, newPattern)
+			}
+
 			info, err := os.Stat(localPath)
 			if err != nil {
 				logger.WarnCF("agent", "Failed to stat media file", map[string]any{
