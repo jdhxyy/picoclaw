@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -10,13 +11,15 @@ import (
 const Logo = "🦞"
 
 // GetPicoclawHome returns the picoclaw home directory.
-// Priority: $PICOCLAW_HOME > ~/.picoclaw
+// It always uses the current working directory (./.picoclaw).
+// This is a breaking change from the previous behavior which used ~/.picoclaw.
 func GetPicoclawHome() string {
-	if home := os.Getenv(config.EnvHome); home != "" {
-		return home
+	cwd, err := os.Getwd()
+	if err != nil {
+		// This should never happen in normal circumstances
+		panic(fmt.Sprintf("failed to get current working directory: %v", err))
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".picoclaw")
+	return filepath.Join(cwd, ".picoclaw")
 }
 
 func GetConfigPath() string {

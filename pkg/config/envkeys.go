@@ -12,13 +12,14 @@ package config
 // literals to keep all supported knobs visible in one place and to prevent
 // typos.
 const (
-	// EnvHome overrides the base directory for all picoclaw data
-	// (config, workspace, skills, auth store, …).
-	// Default: ~/.picoclaw
+	// EnvHome is deprecated. The base directory is now always the current
+	// working directory (./.picoclaw). This constant is kept for backward
+	// compatibility but no longer has any effect.
+	// Deprecated: Use current working directory instead.
 	EnvHome = "PICOCLAW_HOME"
 
 	// EnvConfig overrides the full path to the JSON config file.
-	// Default: $PICOCLAW_HOME/config.json
+	// Default: ./.picoclaw/config.json
 	EnvConfig = "PICOCLAW_CONFIG"
 
 	// EnvBuiltinSkills overrides the directory from which built-in

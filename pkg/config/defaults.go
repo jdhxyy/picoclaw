@@ -6,6 +6,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -13,15 +14,8 @@ import (
 // DefaultConfig returns the default configuration for PicoClaw.
 func DefaultConfig() *Config {
 	// Determine the base path for the workspace.
-	// Priority: $PICOCLAW_HOME > ~/.picoclaw
-	var homePath string
-	if picoclawHome := os.Getenv(EnvHome); picoclawHome != "" {
-		homePath = picoclawHome
-	} else {
-		userHome, _ := os.UserHomeDir()
-		homePath = filepath.Join(userHome, ".picoclaw")
-	}
-	workspacePath := filepath.Join(homePath, "workspace")
+	// Always uses the current working directory (./.picoclaw).
+	workspacePath := filepath.Join(resolvePicoclawHome(), "workspace")
 
 	return &Config{
 		Agents: AgentsConfig{
@@ -560,4 +554,15 @@ func DefaultConfig() *Config {
 			GoVersion: GoVersion,
 		},
 	}
+}
+
+// resolvePicoclawHome determines the base directory for picoclaw data.
+// It always uses the current working directory (./.picoclaw).
+func resolvePicoclawHome() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		// This should never happen in normal circumstances
+		panic(fmt.Sprintf("failed to get current working directory: %v", err))
+	}
+	return filepath.Join(cwd, ".picoclaw")
 }

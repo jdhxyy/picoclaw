@@ -2,11 +2,11 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/config"
 	"github.com/sipeed/picoclaw/pkg/fileutil"
 )
 
@@ -40,11 +40,13 @@ func (c *AuthCredential) NeedsRefresh() bool {
 }
 
 func authFilePath() string {
-	if home := os.Getenv(config.EnvHome); home != "" {
-		return filepath.Join(home, "auth.json")
+	// Always use the current working directory (./.picoclaw/auth.json)
+	cwd, err := os.Getwd()
+	if err != nil {
+		// This should never happen in normal circumstances
+		panic(fmt.Sprintf("failed to get current working directory: %v", err))
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".picoclaw", "auth.json")
+	return filepath.Join(cwd, ".picoclaw", "auth.json")
 }
 
 func LoadStore() (*AuthStore, error) {
