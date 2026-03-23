@@ -20,6 +20,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Agents: AgentsConfig{
 			Defaults: AgentDefaults{
+				LogLevel:                  "fatal",
 				Workspace:                 workspacePath,
 				RestrictToWorkspace:       true,
 				Provider:                  "",
@@ -29,6 +30,7 @@ func DefaultConfig() *Config {
 				MaxToolIterations:         50,
 				SummarizeMessageThreshold: 20,
 				SummarizeTokenPercent:     75,
+				SteeringMode:              "one-at-a-time",
 				ToolFeedback: ToolFeedbackConfig{
 					Enabled:       true,
 					MaxArgsLength: 300,
@@ -56,6 +58,7 @@ func DefaultConfig() *Config {
 					Enabled: true,
 					Text:    "Thinking... 💭",
 				},
+				Streaming:     StreamingConfig{Enabled: true, ThrottleSeconds: 3, MinGrowthChars: 200},
 				UseMarkdownV2: false,
 			},
 			Feishu: FeishuConfig{
@@ -167,6 +170,14 @@ func DefaultConfig() *Config {
 				WelcomeMessage:    "Hello! I'm your AI assistant. How can I help you today?",
 				ProcessingMessage: DefaultWeComAIBotProcessingMessage,
 			},
+			Weixin: WeixinConfig{
+				Enabled:    false,
+				Token:      "",
+				BaseURL:    "https://ilinkai.weixin.qq.com/",
+				CDNBaseURL: "https://novac2c.cdn.weixin.qq.com/c2c",
+				AllowFrom:  FlexibleStringSlice{},
+				Proxy:      "",
+			},
 			Pico: PicoConfig{
 				Enabled:        false,
 				Token:          "",
@@ -175,6 +186,14 @@ func DefaultConfig() *Config {
 				WriteTimeout:   10,
 				MaxConnections: 100,
 				AllowFrom:      FlexibleStringSlice{},
+			},
+		},
+		Hooks: HooksConfig{
+			Enabled: true,
+			Defaults: HookDefaultsConfig{
+				ObserverTimeoutMS:    500,
+				InterceptorTimeoutMS: 5000,
+				ApprovalTimeoutMS:    60000,
 			},
 		},
 		Providers: ProvidersConfig{
@@ -450,6 +469,12 @@ func DefaultConfig() *Config {
 					SearchEngine: "search_std",
 					MaxResults:   5,
 				},
+				BaiduSearch: BaiduSearchConfig{
+					Enabled:    false,
+					APIKey:     "",
+					BaseURL:    "https://qianfan.baidubce.com/v2/ai_search/web_search",
+					MaxResults: 10,
+				},
 			},
 			Cron: CronToolsConfig{
 				ToolConfig: ToolConfig{
@@ -551,6 +576,7 @@ func DefaultConfig() *Config {
 			MonitorUSB: true,
 		},
 		Voice: VoiceConfig{
+			ModelName:         "",
 			EchoTranscription: false,
 		},
 		BuildInfo: BuildInfo{

@@ -1,6 +1,10 @@
 package tools
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/sipeed/picoclaw/pkg/providers"
+)
 
 // MediaDispatchType defines how media data should be dispatched.
 // It determines whether media is sent to external channels or to the LLM for analysis.
@@ -55,6 +59,10 @@ type ToolResult struct {
 	// - "OutboundMediaMessage": send to external channels (default)
 	// - "SendToLLM": inject into LLM context for analysis
 	MediaDispatch MediaDispatchType `json:"media_dispatch,omitempty"`
+	// Messages holds the ephemeral session history after execution.
+	// Only populated by SubTurn executions; used by evaluator_optimizer
+	// to carry stateful worker context across evaluation iterations.
+	Messages []providers.Message `json:"-"`
 }
 
 // NewToolResult creates a basic ToolResult with content for the LLM.

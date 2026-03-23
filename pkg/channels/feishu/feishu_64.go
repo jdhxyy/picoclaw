@@ -422,6 +422,15 @@ func (c *FeishuChannel) handleMessageReceive(ctx context.Context, event *larkim.
 		mediaRefs = c.downloadInboundMedia(ctx, chatID, messageID, messageType, rawContent, store)
 	}
 
+	// For interactive cards, pass external image URLs via media refs.
+	// Keep content as valid raw JSON for downstream parsing.
+	if messageType == larkim.MsgTypeInteractive {
+		_, externalURLs := extractCardImageKeys(rawContent)
+		if len(externalURLs) > 0 {
+			mediaRefs = append(mediaRefs, externalURLs...)
+		}
+	}
+
 	// Append media tags to content (like Telegram does)
 	content = appendMediaTags(content, messageType, mediaRefs)
 
@@ -557,6 +566,10 @@ func extractContent(messageType, rawContent string) string {
 		// Pass raw JSON to LLM — structured rich text is more informative than flattened plain text
 		return rawContent
 
+	case larkim.MsgTypeInteractive:
+		// Pass raw JSON to LLM — structured card is more informative than flattened text
+		return rawContent
+
 	case larkim.MsgTypeImage:
 		// Image messages don't have text content
 		return ""
@@ -593,6 +606,18 @@ func (c *FeishuChannel) downloadInboundMedia(
 		if ref != "" {
 			refs = append(refs, ref)
 		}
+
+	case larkim.MsgTypeInteractive:
+		// Extract and download images embedded in interactive cards
+		feishuKeys, _ := extractCardImageKeys(rawContent)
+		// Download Feishu-hosted images via API
+		for _, imageKey := range feishuKeys {
+			ref := c.downloadResource(ctx, messageID, imageKey, "image", ".jpg", store, scope)
+			if ref != "" {
+				refs = append(refs, ref)
+			}
+		}
+		// External URLs are passed directly to LLM, not downloaded
 
 	case larkim.MsgTypeFile, larkim.MsgTypeAudio, larkim.MsgTypeMedia:
 		fileKey := extractFileKey(rawContent)
@@ -698,8 +723,9 @@ func (c *FeishuChannel) downloadResource(
 	out.Close()
 
 	ref, err := store.Store(localPath, media.MediaMeta{
-		Filename: filename,
-		Source:   "feishu",
+		Filename:      filename,
+		Source:        "feishu",
+		CleanupPolicy: media.CleanupPolicyDeleteOnCleanup,
 	}, scope)
 	if err != nil {
 		logger.ErrorCF("feishu", "Failed to store downloaded resource", map[string]any{
@@ -714,8 +740,15 @@ func (c *FeishuChannel) downloadResource(
 }
 
 // appendMediaTags appends media type tags to content (like Telegram's "[image: photo]").
+// For interactive cards, media tags are not appended because content is raw JSON
+// and appending would produce invalid JSON format.
 func appendMediaTags(content, messageType string, mediaRefs []string) string {
 	if len(mediaRefs) == 0 {
+		return content
+	}
+
+	// Don't append tags to JSON content (interactive cards) - would produce invalid JSON
+	if messageType == larkim.MsgTypeInteractive {
 		return content
 	}
 
