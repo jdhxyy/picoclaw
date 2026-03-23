@@ -2432,8 +2432,8 @@ turnLoop:
 						parts = append(parts, part)
 					}
 					al.bus.PublishOutboundMedia(ctx, bus.OutboundMediaMessage{
-						Channel: opts.Channel,
-						ChatID:  opts.ChatID,
+						Channel: ts.channel,
+						ChatID:  ts.chatID,
 						Parts:   parts,
 					})
 
@@ -2441,24 +2441,19 @@ turnLoop:
 					// Unknown dispatch type, log warning and default to outbound
 					logger.WarnCF("agent", "Unknown media dispatch type, defaulting to outbound",
 						map[string]any{
-							"tool":          r.tc.Name,
-							"dispatch_type": r.result.MediaDispatch,
+							"tool":          toolName,
+							"dispatch_type": toolResult.MediaDispatch,
 						})
-					parts := make([]bus.MediaPart, 0, len(r.result.Media))
-					for _, ref := range r.result.Media {
+					parts := make([]bus.MediaPart, 0, len(toolResult.Media))
+					for _, ref := range toolResult.Media {
 						parts = append(parts, bus.MediaPart{Ref: ref})
 					}
 					al.bus.PublishOutboundMedia(ctx, bus.OutboundMediaMessage{
-						Channel: opts.Channel,
-						ChatID:  opts.ChatID,
+						Channel: ts.channel,
+						ChatID:  ts.chatID,
 						Parts:   parts,
 					})
 				}
-				al.bus.PublishOutboundMedia(ctx, bus.OutboundMediaMessage{
-					Channel: ts.channel,
-					ChatID:  ts.chatID,
-					Parts:   parts,
-				})
 			}
 
 			contentForLLM := toolResult.ForLLM
