@@ -644,7 +644,8 @@ func (c *FeishuChannel) downloadInboundMedia(
 }
 
 // downloadResource downloads a message resource (image/file) from Feishu,
-// writes it to the project media directory, and stores the reference in MediaStore.
+// writes it to a temp file, and stores the reference in MediaStore.
+// The MediaStore (FileStorage) will save it to workspace/files/ with original filename.
 // fallbackExt (e.g. ".jpg") is appended when the resolved filename has no extension.
 func (c *FeishuChannel) downloadResource(
 	ctx context.Context,
@@ -693,7 +694,7 @@ func (c *FeishuChannel) downloadResource(
 		filename += fallbackExt
 	}
 
-	// Write to the shared picoclaw_media directory using a unique name to avoid collisions.
+	// Write to temp directory first, then let MediaStore handle persistence
 	mediaDir := media.TempDir()
 	if mkdirErr := os.MkdirAll(mediaDir, 0o700); mkdirErr != nil {
 		logger.ErrorCF("feishu", "Failed to create media directory", map[string]any{
@@ -722,10 +723,11 @@ func (c *FeishuChannel) downloadResource(
 	}
 	out.Close()
 
+	// Store will save to workspace/files/ with original filename (cover strategy)
 	ref, err := store.Store(localPath, media.MediaMeta{
 		Filename:      filename,
 		Source:        "feishu",
-		CleanupPolicy: media.CleanupPolicyDeleteOnCleanup,
+		CleanupPolicy: media.CleanupPolicyForgetOnly, // FileStorage manages its own files
 	}, scope)
 	if err != nil {
 		logger.ErrorCF("feishu", "Failed to store downloaded resource", map[string]any{
@@ -735,6 +737,9 @@ func (c *FeishuChannel) downloadResource(
 		os.Remove(localPath)
 		return ""
 	}
+
+	// Clean up temp file
+	os.Remove(localPath)
 
 	return ref
 }

@@ -38,6 +38,7 @@ import (
 	"github.com/sipeed/picoclaw/pkg/logger"
 	"github.com/sipeed/picoclaw/pkg/media"
 	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/sipeed/picoclaw/pkg/storage"
 	"github.com/sipeed/picoclaw/pkg/state"
 	"github.com/sipeed/picoclaw/pkg/tools"
 	"github.com/sipeed/picoclaw/pkg/voice"
@@ -266,20 +267,15 @@ func setupAndStartServices(
 	}
 	fmt.Println("✓ Heartbeat service started")
 
-	runningServices.MediaStore = media.NewFileMediaStoreWithCleanup(media.MediaCleanerConfig{
-		Enabled:  cfg.Tools.MediaCleanup.Enabled,
-		MaxAge:   time.Duration(cfg.Tools.MediaCleanup.MaxAge) * time.Minute,
-		Interval: time.Duration(cfg.Tools.MediaCleanup.Interval) * time.Minute,
-	})
-	if fms, ok := runningServices.MediaStore.(*media.FileMediaStore); ok {
-		fms.Start()
+	// Use new persistent file storage instead of temp media store
+	// Files are stored in workspace/files/ with original filenames
+	runningServices.MediaStore, err = storage.NewFileStorage(cfg.Agents.Defaults.Workspace)
+	if err != nil {
+		return nil, fmt.Errorf("error creating file storage: %w", err)
 	}
 
 	runningServices.ChannelManager, err = channels.NewManager(cfg, msgBus, runningServices.MediaStore)
 	if err != nil {
-		if fms, ok := runningServices.MediaStore.(*media.FileMediaStore); ok {
-			fms.Stop()
-		}
 		return nil, fmt.Errorf("error creating channel manager: %w", err)
 	}
 
@@ -344,11 +340,8 @@ func stopAndCleanupServices(runningServices *services, shutdownTimeout time.Dura
 	if runningServices.CronService != nil {
 		runningServices.CronService.Stop()
 	}
-	if runningServices.MediaStore != nil {
-		if fms, ok := runningServices.MediaStore.(*media.FileMediaStore); ok {
-			fms.Stop()
-		}
-	}
+	// MediaStore is persistent, no cleanup needed
+	_ = runningServices.MediaStore
 }
 
 func shutdownGateway(
@@ -468,13 +461,10 @@ func restartServices(
 	}
 	fmt.Println("  ✓ Heartbeat service restarted")
 
-	runningServices.MediaStore = media.NewFileMediaStoreWithCleanup(media.MediaCleanerConfig{
-		Enabled:  cfg.Tools.MediaCleanup.Enabled,
-		MaxAge:   time.Duration(cfg.Tools.MediaCleanup.MaxAge) * time.Minute,
-		Interval: time.Duration(cfg.Tools.MediaCleanup.Interval) * time.Minute,
-	})
-	if fms, ok := runningServices.MediaStore.(*media.FileMediaStore); ok {
-		fms.Start()
+	// Use new persistent file storage instead of temp media store
+	runningServices.MediaStore, err = storage.NewFileStorage(cfg.Agents.Defaults.Workspace)
+	if err != nil {
+		return fmt.Errorf("error recreating file storage: %w", err)
 	}
 	al.SetMediaStore(runningServices.MediaStore)
 
